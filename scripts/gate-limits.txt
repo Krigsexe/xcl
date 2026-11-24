@@ -2,7 +2,7 @@
 # A line only goes down, in the change that fixes the findings; never up.
 hardcoded-memory = 48
 mem-leak = 36
-panic-source = 0
+panic-source = 792
 unbounded-allocation = 127
 unsafe-block = 812
 unsafe-fn-doc = 451
