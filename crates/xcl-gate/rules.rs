@@ -206,12 +206,31 @@ pub fn scan(rel: &str, text: &str, opts: &Options, out: &mut Vec<Violation>) {
     let mut hit = |rule: &'static str, i: usize| {
         out.push(Violation { rule, path: rel.to_string(), line: i + 1, text: lines[i].trim().to_string() });
     };
+    let is_test_file = rel.starts_with("tests/") || rel.contains("/tests/");
+    let mut test_pending = false;
+    let mut test_depth: usize = 0;
+
     for (i, line) in lines.iter().enumerate() {
         if is_comment(line) {
             continue;
         }
         let c = code(line);
         let t = c.trim_start();
+
+        if test_depth == 0 && (t.starts_with("#[cfg(test)]") || t.starts_with("#[test]")) {
+            test_pending = true;
+        }
+        let opens = c.chars().filter(|&ch| ch == '{').count();
+        let closes = c.chars().filter(|&ch| ch == '}').count();
+        let in_test = is_test_file || test_depth > 0 || (test_pending && opens > 0);
+        if test_pending && opens > 0 {
+            test_depth = opens.saturating_sub(closes);
+            test_pending = false;
+        } else if test_pending && c.contains(';') {
+            test_pending = false;
+        } else if test_depth > 0 {
+            test_depth = test_depth.saturating_add(opens).saturating_sub(closes);
+        }
 
         if t.contains("unsafe impl ") && !has_safety_note(&lines, i, 1) {
             hit("unsafe-impl", i);
@@ -222,7 +241,7 @@ pub fn scan(rel: &str, text: &str, opts: &Options, out: &mut Vec<Violation>) {
         if (c.contains("unsafe {") || c.contains("unsafe{")) && !has_safety_note(&lines, i, 3) {
             hit("unsafe-block", i);
         }
-        if c.contains(".unwrap()") || c.contains(".expect(") {
+        if !in_test && (c.contains(".unwrap()") || c.contains(".expect(")) {
             hit("panic-source", i);
         }
         if c.contains("mem::forget(") || c.contains(".leak()") || c.contains("Box::leak(") {
