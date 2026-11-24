@@ -1,0 +1,9 @@
+# Findings the build tolerates today. A count above its line fails the build.
+# A line only goes down, in the change that fixes the findings; never up.
+hardcoded-memory = 48
+mem-leak = 36
+panic-source = 2734
+unbounded-allocation = 127
+unsafe-block = 812
+unsafe-fn-doc = 451
+unsafe-impl = 30
